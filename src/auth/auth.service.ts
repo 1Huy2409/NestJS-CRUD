@@ -1,4 +1,4 @@
-import { Injectable, Body } from '@nestjs/common';
+import { Injectable, Body, UnauthorizedException } from '@nestjs/common';
 import { PrismaService } from 'src/prisma/prisma.service';
 import { AuthDto } from './dto';
 import * as argon from 'argon2';
@@ -29,28 +29,24 @@ export class AuthService {
     }
   }
   async signin(@Body() dto: AuthDto) {
-    try {
-      // find the user by email
-      const user = await this.prisma.user.findUnique({
-        where: {
-          email: dto.email,
-        },
-      });
-      if (!user) {
-        console.log('This email does not exist in this system');
-        return;
-      }
-      if (await argon.verify(user.password, dto.password)) {
-        // password match
-        console.log('Welcome back to this App');
-      } else {
-        // password did not match
-        console.log('Incorrect password');
-        return;
-      }
-    } catch (error) {
-      console.log(error);
+    const user = await this.prisma.user.findUnique({
+      where: {
+        email: dto.email,
+      },
+    });
+    if (!user) {
+      // throw UnauthorizationException
+      console.log('This email does not exist in this system');
+      throw new UnauthorizedException('Credential Incorrect');
     }
-    return dto;
+    if (await argon.verify(user.password, dto.password)) {
+      // password match
+      console.log('Welcome back to this App');
+    } else {
+      throw new UnauthorizedException('Credential Incorrect');
+    }
+    return {
+      message: 'Sign in successfully',
+    };
   }
 }
