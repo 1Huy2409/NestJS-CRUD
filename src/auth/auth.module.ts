@@ -13,6 +13,7 @@ import { JwtModule } from '@nestjs/jwt';
       signOptions: { expiresIn: '60s' },
     }),
   ],
+  exports: [AuthModule],
   controllers: [AuthController],
   providers: [AuthService],
 })
