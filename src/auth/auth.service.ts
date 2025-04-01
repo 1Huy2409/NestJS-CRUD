@@ -1,10 +1,14 @@
 import { Injectable, Body, UnauthorizedException } from '@nestjs/common';
 import { PrismaService } from 'src/prisma/prisma.service';
+import { JwtService } from '@nestjs/jwt';
 import { AuthDto } from './dto';
 import * as argon from 'argon2';
 @Injectable()
 export class AuthService {
-  constructor(private prisma: PrismaService) {}
+  constructor(
+    private prisma: PrismaService,
+    private jwtService: JwtService,
+  ) {}
   async signup(@Body() dto: AuthDto) {
     // try catch, validate form ==> hash password by argon => create new user
     try {
@@ -29,6 +33,7 @@ export class AuthService {
     }
   }
   async signin(@Body() dto: AuthDto) {
+    console.log(process.env.API_SECRET_KEY);
     const user = await this.prisma.user.findUnique({
       where: {
         email: dto.email,
@@ -40,13 +45,18 @@ export class AuthService {
       throw new UnauthorizedException('Credential Incorrect');
     }
     if (await argon.verify(user.password, dto.password)) {
-      // password match
-      console.log('Welcome back to this App');
+      // server create jwt token then send to client
+      const expiresIn = 60;
+      const JwtToken = await this.jwtService.signAsync(
+        { email: user.email },
+        { expiresIn },
+      );
+      return {
+        JwtToken,
+        expiresIn,
+      };
     } else {
       throw new UnauthorizedException('Credential Incorrect');
     }
-    return {
-      message: 'Sign in successfully',
-    };
   }
 }
